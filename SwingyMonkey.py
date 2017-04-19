@@ -54,7 +54,7 @@ class SwingyMonkey:
         try:
             pg.mixer.init()
         except:
-            print "No sound."
+            print("No sound.")
             self.sound = False
 
         # Set up the screen for rendering.
@@ -144,7 +144,7 @@ class SwingyMonkey:
             self.hook = self.screen_width
 
         # Eliminate trees that have moved off the screen.
-        self.trees = filter(lambda x: x['x'] > -self.tree_img.get_width(), self.trees)
+        self.trees = [x for x in self.trees if x['x'] > -self.tree_img.get_width()]
 
         # Monkey dynamics
         self.monkey_loc -= self.vel
@@ -174,8 +174,8 @@ class SwingyMonkey:
                                  (tree['x']-(self.iter+self.background_img.get_width()), tree['y'],
                                   self.tree_img.get_width(), self.tree_gap))
                 
-            trunk_left  = tree['x'] + 215
-            trunk_right = tree['x'] + 290
+            trunk_left  = tree['x']
+            trunk_right = tree['x'] + self.tree_img.get_width()
             trunk_top   = tree['y']
             trunk_bot   = tree['y'] + self.tree_gap
 
@@ -208,7 +208,7 @@ class SwingyMonkey:
 
         # Render the score
         score_text = self.font.render("Score: %d" % (self.score), 1, (230, 40, 40))
-	self.screen.blit(score_text, score_text.get_rect())
+        self.screen.blit(score_text, score_text.get_rect())
 
         if self.text is not None:
             text = self.font.render(self.text, 1, (230, 40, 40))
