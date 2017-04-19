@@ -14,11 +14,13 @@ class Learner(object):
         self.last_state  = None
         self.last_action = None
         self.last_reward = None
+        self.Q = Q_obj()
 
     def reset(self):
         self.last_state  = None
         self.last_action = None
         self.last_reward = None 
+        self.Q = Q_obj()
         
     class Q_obj():
         def __init__(self):
@@ -30,11 +32,14 @@ class Learner(object):
             return
             
         def update(self, s, a, r, s_prime, a_prime):
-            updated_Q = self
-            #TODO
-            return updated_Q
-
-    Q = Q_obj()
+            updated_Q = self #TODO: change
+            self = updated_Q
+    
+    def policy(self, state):
+    
+        action = npr.rand() < 0.1 #TODO: change
+        
+        return action 
         
     def action_callback(self, state):
         '''
@@ -57,7 +62,14 @@ class Learner(object):
             
         else:
             
-            Q = Q.update()
+            self.Q.update() #TODO:add args
+            
+            new_action = self.policy(state)
+            new_state = state
+
+            self.last_action = new_action
+            self.last_state  = new_state            
+            
             # here epsilon griddy with the updated Q and the current state
             return self.last_action
 
