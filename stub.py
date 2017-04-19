@@ -18,13 +18,21 @@ class Learner(object):
     def reset(self):
         self.last_state  = None
         self.last_action = None
-        self.last_reward = None
-
+        self.last_reward = None 
+        
+    class Q():
+        def __init__(self):
+            pass
+        def get_quality(self, s,a):
+            return
+        def update(self):
+        
     def action_callback(self, state):
         '''
         Implement this function to learn things and take actions.
         Return 0 if you don't want to jump and 1 if you do.
         '''
+        
         # state = s'
         # self.last_action = a
         # self.last_state = s
