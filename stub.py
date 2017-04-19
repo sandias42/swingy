@@ -20,36 +20,46 @@ class Learner(object):
         self.last_action = None
         self.last_reward = None 
         
-    class Q():
+    class Q_obj():
         def __init__(self):
             pass
-        def get_quality(self, s,a):
+            #TODO: random initialization of Q
+            
+        def get_quality(self, s, a):
+            #TODO
             return
-        def update(self):
+            
+        def update(self, s, a, r, s_prime, a_prime):
+            updated_Q = self
+            #TODO
+            return updated_Q
+
+    Q = Q_obj()
         
     def action_callback(self, state):
         '''
         Implement this function to learn things and take actions.
         Return 0 if you don't want to jump and 1 if you do.
         '''
-        
         # state = s'
         # self.last_action = a
         # self.last_state = s
         # self.last_reward = r(s,a)
         # update Q
         
-        # You'll need to select and action and return it.
-        # Return 0 to swing and 1 to jump.
+        if self.last_action is None:
+            new_action = npr.rand() < 0.1 # CHANGE
+            new_state  = state
 
-        new_action = npr.rand() < 0.1 # CHANGE
-        new_state  = state
-
-        self.last_action = new_action
-        self.last_state  = new_state
-
-        # here epsilon griddy with the updated Q and the current state
-        return self.last_action
+            self.last_action = new_action
+            self.last_state  = new_state
+            return self.last_action
+            
+        else:
+            
+            Q = Q.update()
+            # here epsilon griddy with the updated Q and the current state
+            return self.last_action
 
     def reward_callback(self, reward):
         '''This gets called so you can see what reward you get.'''
