@@ -31,7 +31,7 @@ class Learner(object):
         # You'll need to select and action and return it.
         # Return 0 to swing and 1 to jump.
 
-        new_action = npr.rand() < 0.5
+        new_action = npr.rand() < 0.1
         new_state  = state
 
         self.last_action = new_action
@@ -41,7 +41,7 @@ class Learner(object):
 
     def reward_callback(self, reward):
         '''This gets called so you can see what reward you get.'''
-        print reward
+
         self.last_reward = reward
 
 
