@@ -3,6 +3,12 @@ import numpy as np
 import numpy.random as npr
 from collections import deque
 from SwingyMonkey import SwingyMonkey
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
+from keras.layers.advanced_activations import ELU
+
+state_dim = 7 # Number of features in each state
+batch_size = 10
 
 
 class Learner(object):
@@ -45,15 +51,33 @@ class Learner(object):
     class Q_obj(object):
 
         def __init__(self):
-            pass
-            # TODO: random initialization of Q
+            self.action_0 = self.define_model()
+            self.action_1 = self.define_model()
+
+        def define_model(self):
+            model = Sequential()
+            model.add(Dense(32, input_shape=(batch_size, state_dim)))
+            model.add(ELU())
+            model.add(Dropout(.5))
+            model.add(Dense(32))
+            model.add(ELU())
+            model.add(Dropout(.5))
+            model.add(Dense(1))
+            model.compile(loss='mse', optimizer='adam')
+            print "Model has been constructed"
+            return model
 
         def get(self, s, a):
-            # TODO
-            return 0
+            if a == 0:
+                return self.action_0.predict(s)
+            elif a == 1:
+                return self.action_1.predict(s)
+            else:
+                raise ValueError('Unexpected action value, action must be zero or 1')
 
         def update(self):
             # s, a, r, s_prime are all in D
+            # May bot be able to access D because the 
             pass
 
     def policy(self, state):
