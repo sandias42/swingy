@@ -9,8 +9,8 @@ from keras.layers.advanced_activations import ELU
 from keras.optimizers import SGD
 
 state_plus_action_dim = 28 # Number of features in each state
-batch_size = 300
-gamma = .9
+batch_size = 200
+gamma = .99
 
 
 class Learner(object):
@@ -22,12 +22,12 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.memory_capacity = 500  # Tune this hyperparameter
+        self.memory_capacity = 10000  # Tune this hyperparameter
         self.state_index = 0
-
+        self.epoch_index = 0
         # if using epsilon greedy exploration, this specifies prob of random
         # action
-        self.epsilon = lambda i=self.state_index: .5 ** i
+        self.epsilon = lambda i=self.epoch_index: .1 - (.2/200) * i
 
         # specify the discount factor
 
@@ -38,6 +38,8 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
+        self.epoch_index += 1
+        
 
 
 
@@ -51,18 +53,18 @@ class Learner(object):
             # Input size is the number of dims in state plus action variable
             model.add(Dense(400,input_dim=state_plus_action_dim))
             model.add(ELU())
-            model.add(Dropout(0))
+            model.add(Dropout(.3))
             model.add(Dense(100))
             model.add(ELU())
-            model.add(Dropout(0))
+            model.add(Dropout(.3))
             model.add(Dense(50))
             model.add(ELU())
-            model.add(Dropout(0))
+            model.add(Dropout(.3))
             model.add(Dense(32))
             model.add(ELU())
-            model.add(Dropout(0))
+            model.add(Dropout(.2))
             model.add(Dense(1))
-            sgd = SGD(lr=.0001)
+            sgd = SGD(lr=.001)
             model.compile(loss='mse', optimizer=sgd)
             print "Model has been constructed"
             print model.summary()
@@ -97,8 +99,8 @@ class Learner(object):
                 s_prev3, a_prev3, __, __ = D[index -3]
                 s, a, r, s_prime = last_transition
                 #print s.shape
-                x = np.array([list(s_prev3) + [a_prev3] + list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a]])
-                s_prime = np.array(list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a] + list(s_prime))
+                x = np.array([list(s_prev3) + [a_prev3] + list(s_prev2) + [a_prev2] + list(s_prev1) + [a_prev1] + list(s) + [a]])
+                s_prime = np.array(list(s_prev2) + [a_prev2]+ list(s_prev1) + [a_prev1]  + list(s) + [a] + list(s_prime))
                 if r == -10 or r == -5:
                     # print "terminal"
                     y = r
@@ -124,8 +126,8 @@ class Learner(object):
                     s_prev2, a_prev2, __, __ = D[index -2]
                     s_prev3, a_prev3, __, __ = D[index -3]
                     s, a, r, s_prime = last_transition
-                    x.append(np.array(list(s_prev3) + [a_prev3] + list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a]))
-                    s_prime = np.array(list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a] + list(s_prime))
+                    x.append(np.array(list(s_prev3) + [a_prev3] + list(s_prev2) + [a_prev2] + list(s_prev1) + [a_prev1] + list(s) + [a]))
+                    s_prime = np.array(list(s_prev2) + [a_prev2] + list(s_prev1) + [a_prev1] + list(s) + [a] + list(s_prime))
                     if r == -10 or r == -5:
                         # print "terminal"
                         y[i] = r
@@ -136,12 +138,13 @@ class Learner(object):
                 loss = self.model.train_on_batch(np.array(x), y)
                 print "loss is {}".format(loss)
 
-    def policy(self, state):
+    def policy(self):
         # For now, use an epsilon greedy policy with constant epsilon
-        if npr.rand() < self.epsilon:
+        if (npr.rand() < self.epsilon()) or (len(self.D) < 4):
             # Choose an action uniformly at random
             action = npr.rand() < .2
         else:
+            state = self.get_last_states()
             action = np.argmax([self.Q.get(state, 0), self.Q.get(state, 1)])
         return action
 
@@ -157,7 +160,15 @@ class Learner(object):
         processed[4] = state['monkey']['top'] / 400.
         processed[5] = state['monkey']['bot'] / 400.
         return processed
-
+    def get_last_states(self):
+        index = -1
+        last_transition = self.D[index]
+        # get previous 3 in addition to last_action
+        s_prev1, a_prev1, __, __ = self.D[index -1]
+        s_prev2, a_prev2, __, __ = self.D[index -2]
+        s, a, r, s_prime = last_transition
+        return np.array(list(s_prev2) + [a_prev2] + list(s_prev1) + [a_prev1] +list(s)+ [a] + list(s_prime))
+    
     def action_callback(self, state):
         '''
         Implement this function to learn things and take actions.
@@ -185,7 +196,7 @@ class Learner(object):
 
             # The policy abstracts how the learner should choose the next action
             # For example, epsilon greedy or something similar.
-            new_action = self.policy(new_state)
+            new_action = self.policy()
             self.last_action = new_action
             self.last_state = new_state
 
@@ -194,8 +205,6 @@ class Learner(object):
 
     def reward_callback(self, reward):
         '''This gets called so you can see what reward you get.'''
-        if reward == 1:
-            reward = 20
         self.last_reward = reward
 
 
