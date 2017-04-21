@@ -9,7 +9,7 @@ from keras.layers.advanced_activations import ELU
 from keras.optimizers import SGD
 
 state_plus_action_dim = 28 # Number of features in each state
-batch_size = 200
+batch_size = 300
 gamma = .9
 
 
@@ -27,7 +27,7 @@ class Learner(object):
 
         # if using epsilon greedy exploration, this specifies prob of random
         # action
-        self.epsilon = lambda i=self.state_index: .2 ** i
+        self.epsilon = lambda i=self.state_index: .5 ** i
 
         # specify the discount factor
 
@@ -49,7 +49,13 @@ class Learner(object):
         def define_model(self):
             model = Sequential()
             # Input size is the number of dims in state plus action variable
-            model.add(Dense(100,input_dim=state_plus_action_dim))
+            model.add(Dense(400,input_dim=state_plus_action_dim))
+            model.add(ELU())
+            model.add(Dropout(0))
+            model.add(Dense(100))
+            model.add(ELU())
+            model.add(Dropout(0))
+            model.add(Dense(50))
             model.add(ELU())
             model.add(Dropout(0))
             model.add(Dense(32))
