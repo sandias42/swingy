@@ -88,5 +88,8 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# Pycharm stuff
-*.idea*
+# Don't track the resources
+/res
+
+# don't track numpy
+*.npy
