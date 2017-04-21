@@ -9,8 +9,8 @@ from keras.layers.advanced_activations import ELU
 from keras.optimizers import SGD
 
 state_plus_action_dim = 28 # Number of features in each state
-batch_size = 200
-gamma = .99
+batch_size = 42
+gamma = .90
 
 
 class Learner(object):
@@ -22,12 +22,12 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.memory_capacity = 10000  # Tune this hyperparameter
+        self.memory_capacity = 500  # Tune this hyperparameter
         self.state_index = 0
         self.epoch_index = 0
         # if using epsilon greedy exploration, this specifies prob of random
         # action
-        self.epsilon = lambda i=self.epoch_index: .1 - (.2/200) * i
+        self.epsilon = lambda i: .99 ** i
 
         # specify the discount factor
 
@@ -65,7 +65,7 @@ class Learner(object):
             model.add(Dropout(.2))
             model.add(Dense(1))
             sgd = SGD(lr=.001)
-            model.compile(loss='mse', optimizer=sgd)
+            model.compile(loss='mse', optimizer="adam")
             print "Model has been constructed"
             print model.summary()
             return model
@@ -140,11 +140,13 @@ class Learner(object):
 
     def policy(self):
         # For now, use an epsilon greedy policy with constant epsilon
-        if (npr.rand() < self.epsilon()) or (len(self.D) < 4):
+        if (npr.rand() < self.epsilon(self.epoch_index)) or (len(self.D) < 4):
             # Choose an action uniformly at random
-            action = npr.rand() < .2
+            print "choosing randomly"
+            action = npr.rand() < .1
         else:
             state = self.get_last_states()
+            print "calculating optimal action"
             action = np.argmax([self.Q.get(state, 0), self.Q.get(state, 1)])
         return action
 
@@ -160,6 +162,7 @@ class Learner(object):
         processed[4] = state['monkey']['top'] / 400.
         processed[5] = state['monkey']['bot'] / 400.
         return processed
+    
     def get_last_states(self):
         index = -1
         last_transition = self.D[index]
@@ -205,6 +208,8 @@ class Learner(object):
 
     def reward_callback(self, reward):
         '''This gets called so you can see what reward you get.'''
+        if reward == 1:
+            reward = 7
         self.last_reward = reward
 
 
@@ -245,7 +250,7 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 200,10)
+    run_games(agent, hist, 400,10)
 
     # Save history.
     np.save('hist', np.array(hist))
