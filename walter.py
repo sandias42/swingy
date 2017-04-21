@@ -15,13 +15,37 @@ class Learner(object):
         self.last_action = None
         self.last_reward = None
         # bot (0 - 200) + top (200 - 400) + dist (600 - -200) + vel (-60 - 40) + bot (-40 - 460) + top (0 - 500)
-        self.w0 = [0] * (20 + 20 + 20 + 20 + 20 + 20)
-        self.w1 = [0] * (20 + 20 + 20 + 20 + 20 + 20)
+        self.w0 = [0] * (5 * 5 * 5 * 5 * 5 * 5)
+        self.w1 = [0] * (5 * 5 * 5 * 5 * 5 * 5)
+        self.discount = .8
+        self.eta = .1
 
     def reset(self):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
+
+    def __get_state_num(self, state):
+        total = 0
+        tree_bot_scaled = int(state['tree']['bot'] / 50)
+        total += max(min(tree_bot_scaled, 5), 0)
+        total *= 5
+        tree_top_scaled = int((state['tree']['top'] - 200) / 50)
+        total += max(min(tree_top_scaled, 5), 0)
+        total *= 5
+        tree_dist_scaled = int(state['tree']['dist'] / 150)
+        total += max(min(tree_dist_scaled, 5), 0)
+        total *= 5
+        mon_vel_scaled = int((state['monkey']['vel'] + 40) / 16)
+        total += max(min(mon_vel_scaled, 5), 0)
+        total *= 5
+        mon_bot_scaled = int((state['monkey']['bot'] + 50) / 100)
+        total += max(min(mon_bot_scaled, 5), 0)
+        total *= 5
+        mon_top_scaled = int((state['monkey']['top'] + 50) / 100)
+        total += max(min(mon_top_scaled, 5), 0)
+        return total
+
 
     def action_callback(self, state):
         '''
@@ -34,12 +58,56 @@ class Learner(object):
         # You'll need to select and action and return it.
         # Return 0 to swing and 1 to jump.
 
-        new_action = npr.rand() < 0.1
+        # get index of old state
+        old_state_num = -1
+
+        if self.last_state is not None:
+            old_state_num = self.__get_state_num(self.last_state)
+            # print old_state_num
+
+        # get old reward
+        old_rew = self.last_reward
+        if self.last_reward is None:
+            old_rew = 0
+
+        # get index of new state
+        new_state_num = self.__get_state_num(state)
+
+        # get the better of the two actions
+        better_action = 0
+        if self.w0[new_state_num] < self.w1[new_state_num]:
+            better_action = 1
+
+        # set next action to take
+        new_action = better_action
+
+        # update Q values
+        if self.last_action == 0:
+            if better_action == 0:
+                self.w0[old_state_num] -= self.eta * (self.w0[old_state_num] -
+                                                      (old_rew + self.discount * self.w0[new_state_num]))
+            else:
+                self.w0[old_state_num] -= self.eta * (self.w0[old_state_num] -
+                                                      (old_rew + self.discount * self.w1[new_state_num]))
+            print self.w0[old_state_num]
+        else:
+            if better_action == 0:
+                self.w1[old_state_num] -= self.eta * (self.w0[old_state_num] -
+                                                      (old_rew + self.discount * self.w0[new_state_num]))
+            else:
+                self.w1[old_state_num] -= self.eta * (self.w0[old_state_num] -
+                                                      (old_rew + self.discount * self.w1[new_state_num]))
+            print self.w1[old_state_num]
+
+        # with 10% probability, explore
+        if npr.rand() < .1:
+            new_action = abs(1 - better_action)
+
         new_state = state
 
         self.last_action = new_action
         self.last_state = new_state
-        print new_state
+        # print new_state
 
         return self.last_action
 
@@ -83,7 +151,9 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 20, 100)
+    run_games(agent, hist, 1000, 50)
+
+    print hist
 
     # Save history.
     np.save('hist', np.array(hist))

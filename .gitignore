@@ -93,3 +93,6 @@ ENV/
 
 # don't track numpy
 *.npy
+
+# pycharm stuff
+.idea/
