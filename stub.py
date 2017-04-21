@@ -8,7 +8,8 @@ from keras.layers import Dense, Dropout
 from keras.layers.advanced_activations import ELU
 
 state_dim = 7 # Number of features in each state
-batch_size = 10
+batch_size = 20
+gamma = .90
 
 
 class Learner(object):
@@ -20,15 +21,15 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.memory_capacity = 100  # Tune this hyperparameter
+        self.memory_capacity = 30  # Tune this hyperparameter
         self.state_index = 0
 
         # if using epsilon greedy exploration, this specifies prob of random
         # action
-        self.epsilon = 1
+        self.epsilon = .2
 
         # specify the discount factor
-        self.gamma = .1
+
         self.D = deque(maxlen=self.memory_capacity)
         self.Q = self.Q_obj()
 
@@ -36,27 +37,18 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.memory_capacity = 100  # Tune this hyperparameter
         self.state_index = 0
 
-        # if using epsilon greedy exploration, this specifies prob of random
-        # action
-        self.epsilon = 1
-
-        # specify the discount factor
-        self.gamma = .1
-        self.D = deque(maxlen=self.memory_capacity)
-        self.Q = self.Q_obj()
 
     class Q_obj(object):
 
         def __init__(self):
-            self.action_0 = self.define_model()
-            self.action_1 = self.define_model()
+            self.model = self.define_model()
 
         def define_model(self):
             model = Sequential()
-            model.add(Dense(32, input_shape=(batch_size, state_dim)))
+            # Input size is the number of dims in state plus action variable
+            model.add(Dense(32,input_dim=state_dim + 1))
             model.add(ELU())
             model.add(Dropout(.5))
             model.add(Dense(32))
@@ -65,26 +57,40 @@ class Learner(object):
             model.add(Dense(1))
             model.compile(loss='mse', optimizer='adam')
             print "Model has been constructed"
+            print model.summary()
             return model
+        
 
         def get(self, s, a):
-            if a == 0:
-                return self.action_0.predict(s)
-            elif a == 1:
-                return self.action_1.predict(s)
-            else:
-                raise ValueError('Unexpected action value, action must be zero or 1')
+            return self.model.predict(np.array([np.concatenate([s,[a]])]))
 
-        def update(self):
+        def update(self, D):
             # s, a, r, s_prime are all in D
-            # May bot be able to access D because the 
-            pass
+
+            if len(D) <= batch_size:
+                pass
+            else:
+                # Definitely update Q on the last transition,
+                # complete the batch with others from D
+                randomindx = np.random.choice(
+                    np.array(list(D)[:-1]).shape[0], size=(batch_size -1,)
+                )
+                sample = np.array(list(np.array(D)[randomindx]) + [D[-1]])
+                y = np.zeros(batch_size)
+                i = 0
+                x = []
+                for s, a, r, s_prime in sample:
+                    x.append(np.concatenate([s,[a]]))
+                    y[i] = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
+                    i += 1
+                # Not sure exactly how to do this update if I am using two q functions
+                self.model.train_on_batch(np.array(x), y)
 
     def policy(self, state):
         # For now, use an epsilon greedy policy with constant epsilon
         if npr.rand() < self.epsilon:
             # Choose an action uniformly at random
-            action = npr.rand() < .5
+            action = npr.rand() < .1
         else:
             action = np.argmax([self.Q.get(state, 0), self.Q.get(state, 1)])
         return action
@@ -125,7 +131,7 @@ class Learner(object):
 
             # Internally, this update will take into account the last
             # transition in D
-            self.Q.update()
+            self.Q.update(self.D)
 
             # The policy abstracts how the learner should choose the next action
             # For example, epsilon greedy or something similar.
@@ -179,7 +185,7 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 20, 10)
+    run_games(agent, hist, 200,10)
 
     # Save history.
     np.save('hist', np.array(hist))
