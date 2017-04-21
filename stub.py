@@ -6,10 +6,11 @@ from SwingyMonkey import SwingyMonkey
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
 from keras.layers.advanced_activations import ELU
+from keras.optimizers import SGD
 
 state_dim = 7 # Number of features in each state
-batch_size = 20
-gamma = .90
+batch_size = 500
+gamma = .8
 
 
 class Learner(object):
@@ -21,12 +22,12 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.memory_capacity = 30  # Tune this hyperparameter
+        self.memory_capacity = 1000  # Tune this hyperparameter
         self.state_index = 0
 
         # if using epsilon greedy exploration, this specifies prob of random
         # action
-        self.epsilon = .2
+        self.epsilon = lambda i=self.state_index: .2 ** i
 
         # specify the discount factor
 
@@ -37,7 +38,7 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.state_index = 0
+
 
 
     class Q_obj(object):
@@ -48,14 +49,15 @@ class Learner(object):
         def define_model(self):
             model = Sequential()
             # Input size is the number of dims in state plus action variable
-            model.add(Dense(32,input_dim=state_dim + 1))
+            model.add(Dense(100,input_dim=state_dim + 1))
             model.add(ELU())
-            model.add(Dropout(.5))
+            model.add(Dropout(.8))
             model.add(Dense(32))
             model.add(ELU())
-            model.add(Dropout(.5))
+            model.add(Dropout(.8))
             model.add(Dense(1))
-            model.compile(loss='mse', optimizer='adam')
+            sgd = SGD(lr=.001)
+            model.compile(loss='mse', optimizer='rmsprop')
             print "Model has been constructed"
             print model.summary()
             return model
@@ -67,8 +69,16 @@ class Learner(object):
         def update(self, D):
             # s, a, r, s_prime are all in D
 
-            if len(D) <= batch_size:
-                pass
+            if len(D) < batch_size:
+                last_transition = D[-1]
+                s, a, r, s_prime = last_transition
+                if r == -10 or r == -5:
+                    # print "terminal"
+                    y = r
+                else:
+                    y = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
+                x = np.array([np.concatenate([s,[a]])])
+                self.model.train_on_batch(x,[y])
             else:
                 # Definitely update Q on the last transition,
                 # complete the batch with others from D
@@ -81,10 +91,15 @@ class Learner(object):
                 x = []
                 for s, a, r, s_prime in sample:
                     x.append(np.concatenate([s,[a]]))
-                    y[i] = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
+                    if r == -10 or r == -5:
+                        print "terminal"
+                        y[i] = r
+                    else:
+                        y[i] = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
                     i += 1
                 # Not sure exactly how to do this update if I am using two q functions
-                self.model.train_on_batch(np.array(x), y)
+                loss = self.model.train_on_batch(np.array(x), y)
+                # print "loss is {}".format(loss)
 
     def policy(self, state):
         # For now, use an epsilon greedy policy with constant epsilon
@@ -100,12 +115,12 @@ class Learner(object):
         # compatible with the learning algorithm
         processed = np.zeros(7)
         processed[0] = state['score']
-        processed[1] = state['tree']['dist']
-        processed[2] = state['tree']['top']
-        processed[3] = state['tree']['bot']
+        processed[1] = state['tree']['dist'] / 600.
+        processed[2] = state['tree']['top'] / 400.
+        processed[3] = state['tree']['bot'] / 400.
         processed[4] = state['monkey']['vel']
-        processed[5] = state['monkey']['top']
-        processed[6] = state['monkey']['bot']
+        processed[5] = state['monkey']['top'] / 400.
+        processed[6] = state['monkey']['bot'] / 400.
         return processed
 
     def action_callback(self, state):
