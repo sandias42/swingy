@@ -8,9 +8,9 @@ from keras.layers import Dense, Dropout
 from keras.layers.advanced_activations import ELU
 from keras.optimizers import SGD
 
-state_dim = 7 # Number of features in each state
-batch_size = 500
-gamma = .8
+state_plus_action_dim = 28 # Number of features in each state
+batch_size = 200
+gamma = .9
 
 
 class Learner(object):
@@ -22,7 +22,7 @@ class Learner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.memory_capacity = 1000  # Tune this hyperparameter
+        self.memory_capacity = 500  # Tune this hyperparameter
         self.state_index = 0
 
         # if using epsilon greedy exploration, this specifies prob of random
@@ -49,15 +49,15 @@ class Learner(object):
         def define_model(self):
             model = Sequential()
             # Input size is the number of dims in state plus action variable
-            model.add(Dense(100,input_dim=state_dim + 1))
+            model.add(Dense(100,input_dim=state_plus_action_dim))
             model.add(ELU())
-            model.add(Dropout(.8))
+            model.add(Dropout(0))
             model.add(Dense(32))
             model.add(ELU())
-            model.add(Dropout(.8))
+            model.add(Dropout(0))
             model.add(Dense(1))
-            sgd = SGD(lr=.001)
-            model.compile(loss='mse', optimizer='rmsprop')
+            sgd = SGD(lr=.0001)
+            model.compile(loss='mse', optimizer=sgd)
             print "Model has been constructed"
             print model.summary()
             return model
@@ -69,7 +69,8 @@ class Learner(object):
         def update(self, D):
             # s, a, r, s_prime are all in D
 
-            if len(D) < batch_size:
+            if len(D) < 4:
+                """
                 last_transition = D[-1]
                 s, a, r, s_prime = last_transition
                 if r == -10 or r == -5:
@@ -79,33 +80,61 @@ class Learner(object):
                     y = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
                 x = np.array([np.concatenate([s,[a]])])
                 self.model.train_on_batch(x,[y])
+                """
+                pass
+            elif 4 <= len(D) < batch_size:
+                last_transition = D[-1]
+                index = -1
+                # get previous 3 in addition to last_action
+                s_prev1, a_prev1, __, __ = D[index -1]
+                s_prev2, a_prev2, __, __ = D[index -2]
+                s_prev3, a_prev3, __, __ = D[index -3]
+                s, a, r, s_prime = last_transition
+                #print s.shape
+                x = np.array([list(s_prev3) + [a_prev3] + list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a]])
+                s_prime = np.array(list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a] + list(s_prime))
+                if r == -10 or r == -5:
+                    # print "terminal"
+                    y = r
+                else:
+                    y = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
+                loss = self.model.train_on_batch(x,[y])
+                print "loss is {}".format(loss)
             else:
                 # Definitely update Q on the last transition,
                 # complete the batch with others from D
-                randomindx = np.random.choice(
+                randomindx = np.concatenate([np.random.choice(
                     np.array(list(D)[:-1]).shape[0], size=(batch_size -1,)
-                )
-                sample = np.array(list(np.array(D)[randomindx]) + [D[-1]])
+                ), [-1]])
+                
+                #sample = np.array(list(np.array(D)[randomindx]) + [D[-1]])
                 y = np.zeros(batch_size)
                 i = 0
                 x = []
-                for s, a, r, s_prime in sample:
-                    x.append(np.concatenate([s,[a]]))
+                for index in randomindx:
+                    last_transition = D[index]
+                    # get previous 3 in addition to last_action
+                    s_prev1, a_prev1, __, __ = D[index -1]
+                    s_prev2, a_prev2, __, __ = D[index -2]
+                    s_prev3, a_prev3, __, __ = D[index -3]
+                    s, a, r, s_prime = last_transition
+                    x.append(np.array(list(s_prev3) + [a_prev3] + list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a]))
+                    s_prime = np.array(list(s_prev2) + [a_prev2] + list(s_prev3) + [a_prev3] + list(s) + [a] + list(s_prime))
                     if r == -10 or r == -5:
-                        print "terminal"
+                        # print "terminal"
                         y[i] = r
                     else:
                         y[i] = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
                     i += 1
                 # Not sure exactly how to do this update if I am using two q functions
                 loss = self.model.train_on_batch(np.array(x), y)
-                # print "loss is {}".format(loss)
+                print "loss is {}".format(loss)
 
     def policy(self, state):
         # For now, use an epsilon greedy policy with constant epsilon
         if npr.rand() < self.epsilon:
             # Choose an action uniformly at random
-            action = npr.rand() < .1
+            action = npr.rand() < .2
         else:
             action = np.argmax([self.Q.get(state, 0), self.Q.get(state, 1)])
         return action
@@ -113,14 +142,14 @@ class Learner(object):
     def process_state(self, state):
         # Process the state returned by the world into a format
         # compatible with the learning algorithm
-        processed = np.zeros(7)
-        processed[0] = state['score']
-        processed[1] = state['tree']['dist'] / 600.
-        processed[2] = state['tree']['top'] / 400.
-        processed[3] = state['tree']['bot'] / 400.
-        processed[4] = state['monkey']['vel']
-        processed[5] = state['monkey']['top'] / 400.
-        processed[6] = state['monkey']['bot'] / 400.
+        processed = np.zeros(6)
+#        processed[0] = state['score']
+        processed[0] = state['tree']['dist'] / 600.
+        processed[1] = state['tree']['top'] / 400.
+        processed[2] = state['tree']['bot'] / 400.
+        processed[3] = state['monkey']['vel']
+        processed[4] = state['monkey']['top'] / 400.
+        processed[5] = state['monkey']['bot'] / 400.
         return processed
 
     def action_callback(self, state):
@@ -159,7 +188,8 @@ class Learner(object):
 
     def reward_callback(self, reward):
         '''This gets called so you can see what reward you get.'''
-
+        if reward == 1:
+            reward = 20
         self.last_reward = reward
 
 
