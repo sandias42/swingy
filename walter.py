@@ -17,13 +17,15 @@ class Learner(object):
         # bot (0 - 200) + top (200 - 400) + dist (600 - -200) + vel (-60 - 40) + bot (-40 - 460) + top (0 - 500)
         self.w0 = [0] * (5 * 5 * 5 * 5 * 5 * 5)
         self.w1 = [0] * (5 * 5 * 5 * 5 * 5 * 5)
-        self.discount = .8
+        self.discount = .9
         self.eta = .1
+        self.epochs = 0
 
     def reset(self):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
+        self.epochs += 1
 
     def __get_state_num(self, state):
         total = 0
@@ -86,18 +88,28 @@ class Learner(object):
             if better_action == 0:
                 self.w0[old_state_num] -= self.eta * (self.w0[old_state_num] -
                                                       (old_rew + self.discount * self.w0[new_state_num]))
+                # print self.eta * (self.w0[old_state_num] -
+                #                                       (old_rew + self.discount * self.w0[new_state_num]))
             else:
                 self.w0[old_state_num] -= self.eta * (self.w0[old_state_num] -
                                                       (old_rew + self.discount * self.w1[new_state_num]))
-            print self.w0[old_state_num]
+                # print self.eta * (self.w0[old_state_num] -
+                #                                       (old_rew + self.discount * self.w1[new_state_num]))
+            # print self.w0[old_state_num]
         else:
             if better_action == 0:
                 self.w1[old_state_num] -= self.eta * (self.w0[old_state_num] -
                                                       (old_rew + self.discount * self.w0[new_state_num]))
+                # print old_rew + self.discount * self.w0[new_state_num]
+                # print self.eta * (self.w0[old_state_num] -
+                #                                       (old_rew + self.discount * self.w0[new_state_num]))
             else:
                 self.w1[old_state_num] -= self.eta * (self.w0[old_state_num] -
                                                       (old_rew + self.discount * self.w1[new_state_num]))
-            print self.w1[old_state_num]
+                # print old_rew + self.discount * self.w1[new_state_num]
+                # print self.eta * (self.w0[old_state_num] -
+                #                                       (old_rew + self.discount * self.w1[new_state_num]))
+            # print self.w1[old_state_num]
 
         # with 10% probability, explore
         if npr.rand() < .1:
@@ -151,9 +163,14 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 1000, 50)
+    run_games(agent, hist, 500, 50)
 
     print hist
 
     # Save history.
     np.save('hist', np.array(hist))
+    print sum(hist[0:100])
+    print sum(hist[100:200])
+    print sum(hist[200:300])
+    print sum(hist[300:400])
+    print sum(hist[400:500])
