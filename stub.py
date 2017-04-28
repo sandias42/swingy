@@ -1,5 +1,6 @@
 # Imports.
 import numpy as np
+import matplotlib.pyplot as plt
 import numpy.random as npr
 from collections import deque
 from SwingyMonkey import SwingyMonkey
@@ -9,8 +10,10 @@ from keras.layers.advanced_activations import ELU
 from keras.optimizers import SGD
 
 state_plus_action_dim = 28 # Number of features in each state
-batch_size = 42
-gamma = .90
+batch_size = 500
+gamma = .93
+optim = "adam"
+mem_cap = 3000
 
 
 class Learner(object):
@@ -27,8 +30,8 @@ class Learner(object):
         self.epoch_index = 0
         # if using epsilon greedy exploration, this specifies prob of random
         # action
-        self.epsilon = lambda i: .99 ** i
 
+        self.epsilon = lambda i: .95 ** i
         # specify the discount factor
 
         self.D = deque(maxlen=self.memory_capacity)
@@ -57,14 +60,13 @@ class Learner(object):
             model.add(Dense(100))
             model.add(ELU())
             model.add(Dropout(.3))
-            model.add(Dense(50))
+            model.add(Dense(100))
             model.add(ELU())
             model.add(Dropout(.3))
             model.add(Dense(32))
             model.add(ELU())
             model.add(Dropout(.2))
             model.add(Dense(1))
-            sgd = SGD(lr=.001)
             model.compile(loss='mse', optimizer="adam")
             print "Model has been constructed"
             print model.summary()
@@ -107,7 +109,7 @@ class Learner(object):
                 else:
                     y = r + gamma * np.max([self.get(s_prime,0),self.get(s_prime,1)])
                 loss = self.model.train_on_batch(x,[y])
-                print "loss is {}".format(loss)
+                #print "loss is {}".format(loss)
             else:
                 # Definitely update Q on the last transition,
                 # complete the batch with others from D
@@ -136,17 +138,19 @@ class Learner(object):
                     i += 1
                 # Not sure exactly how to do this update if I am using two q functions
                 loss = self.model.train_on_batch(np.array(x), y)
-                print "loss is {}".format(loss)
+                #print "loss is {}".format(loss)
 
     def policy(self):
         # For now, use an epsilon greedy policy with constant epsilon
-        if (npr.rand() < self.epsilon(self.epoch_index)) or (len(self.D) < 4):
+        ep = self.epsilon(self.epoch_index)
+        if (npr.rand() < ep) or (len(self.D) < 4):
             # Choose an action uniformly at random
-            print "choosing randomly"
+            #print "choosing randomly"
             action = npr.rand() < .1
         else:
             state = self.get_last_states()
-            print "calculating optimal action"
+            #print "calculating optimal action"
+
             action = np.argmax([self.Q.get(state, 0), self.Q.get(state, 1)])
         return action
 
@@ -213,7 +217,7 @@ class Learner(object):
         self.last_reward = reward
 
 
-def run_games(learner, hist, iters=100, t_len=100):
+def run_games(learner, hist, iters=100, t_len=1):
     '''
     Driver function to simulate learning by having the agent play a sequence of games.
     '''
@@ -250,7 +254,33 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 400,10)
+    iter = 2000
+    run_games(agent, hist, iter,10)
 
+    plt.plot(hist, marker='*')
+    plt.title('first 100:{}, last 100:{}, max:{} '.format(
+    np.sum(hist[:100]),
+    np.sum(hist[-100:]),
+    np.max(hist)
+    ))
+    plt.xlabel('iteration of the game')
+    plt.ylabel('score')
+    plt.savefig('batch size{}_gamma{}_mem_cap{}_optim_{}_iter.png'.format(batch_size,
+    gamma,
+    mem_cap,
+    optim,
+    iter))
+    plt.show()
+    f = open('./run_stats.txt','a')
+    f.write('batch size{}_gamma{}_mem_cap{}_optim_{}_iter{}.png'.format(batch_size,
+    gamma,
+    mem_cap,
+    optim,
+    iter) + '\n'+ 'first 100:{}, last 100:{}, max:{} '.format(
+    np.sum(hist[:100]),
+    np.sum(hist[-100:]),
+    np.max(hist)
+    ) + '\n\n')
+    
     # Save history.
     np.save('hist', np.array(hist))

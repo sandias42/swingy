@@ -1,0 +1,88 @@
+batch size=13
+lr = 0.1
+gamma = .7
+200 epochs
+
+63 in first 100, 84 in second 100, max 8
+49,59, 7
+59, 85, 10
+21, 18, 4
+22, 65, 6
+
+gamma = .9
+
+25,55, 8
+58, 115, 7
+
+random
+20,15,3
+
+gamma = .9
+batch = 80
+9, 42, 3
+45, 136, 25
+
+fixed gravity:
+batch size80_gamma0.9_mem_cap500_optim_adam.png
+first 100:66, last 100:178, max:12 
+
+unfixed gravity:
+batch size80_gamma0.9_mem_cap500_optim_adam.png
+*first 100:45, last 100:61, max:8 
+
+batch size150_gamma0.9_mem_cap500_optim_adam.png
+first 100:43, last 100:63, max:5 
+
+batch size80_gamma0.9_mem_cap1000_optim_adam.png
+first 100:38, last 100:69, max:6 
+
+batch size80_gamma0.9_mem_cap2000_optim_adam.png
+*first 100:68, last 100:95, max:7 
+
+batch size160_gamma0.9_mem_cap3000_optim_adam.png
+first 100:48, last 100:26, max:5 
+
+batch size160_gamma0.99_mem_cap2000_optim_adam.png
+first 100:8, last 100:40, max:4 
+
+batch size160_gamma0.75_mem_cap2000_optim_adam.png
+first 100:18, last 100:42, max:3 
+
+batch size160_gamma0.95_mem_cap2000_optim_adam.png
+first 100:46, last 100:63, max:5 
+
+batch size90_gamma0.9_mem_cap2000_optim_adam.png
+first 100:36, last 100:63, max:4 
+
+batch size90_gamma0.9_mem_cap2000_optim_sgd_lr0.001.png
+first 100:1, last 100:4, max:1 
+
+batch size90_gamma0.9_mem_cap2000_optim_sgd_lr0.001.png
+first 100:23, last 100:15, max:1 
+
+batch size90_gamma0.8_mem_cap2000_optim_adam.png
+first 100:27, last 100:60, max:6 
+
+batch size90_gamma0.8_mem_cap2000_optim_Adagrad.png
+first 100:1, last 100:0, max:1 
+
+batch size120_gamma0.9_mem_cap2000_optim_adam.png
+first 100:24, last 100:61, max:8 
+
+Now, 300 iterations instead of 200 before:batch size120_gamma0.9_mem_cap2000_optim_adam.png
+first 100:55, last 100:121, max:9 
+
+
+
+
+batch size120_gamma0.9_mem_cap2000_optim_adam_400.png
+first 100:4, last 100:87, max:10 
+
+batch size120_gamma0.95_mem_cap3000_optim_adam_500.png
+first 100:18, last 100:195, max:19 
+
+batch size120_gamma0.95_mem_cap3000_optim_adam_iter2000.png
+first 100:44, last 100:263, max:39
+
+240 & 0.93 & 3000 & 2000 & 1 & 186 & 37 
+
